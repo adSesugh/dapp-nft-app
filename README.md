@@ -1,57 +1,65 @@
-# Sample Hardhat 3 Beta Project (`node:test` and `viem`)
+# NFT Collection DApp (Hardhat + Next.js)
 
-This project showcases a Hardhat 3 Beta project using the native Node.js test runner (`node:test`) and the `viem` library for Ethereum interactions.
+A monorepo for deploying an ERC‑721 smart contract and minting NFTs from a Next.js dapp. Contracts are built with Hardhat 3 and Ignition; the frontend uploads files/metadata to IPFS via Pinata and calls `mintNFT`.
 
-To learn more about the Hardhat 3 Beta, please visit the [Getting Started guide](https://hardhat.org/docs/getting-started#getting-started-with-hardhat-3). To share your feedback, join our [Hardhat 3 Beta](https://hardhat.org/hardhat3-beta-telegram-group) Telegram group or [open an issue](https://github.com/NomicFoundation/hardhat/issues/new) in our GitHub issue tracker.
+## Project Structure
+- `contracts/MyNFT.sol`: ERC721URIStorage with owner‑only `mintNFT(address,string)`.
+- `ignition/modules/MyNFTModule.ts`: Ignition module to deploy `MyNFT`.
+- `nft-minter-dapp/`: Next.js app that uploads to IPFS and mints NFTs.
+- `hardhat.config.ts`: Networks (`hardhatMainnet`, `hardhatOp`, `sepolia`).
 
-## Project Overview
+## Prerequisites
+- Node.js 18+ and npm.
+- MetaMask connected to the same network as the contract.
+- Pinata account + JWT for uploads.
+- Env for testnet deployments:
+  - `SEPOLIA_RPC_URL` (HTTP RPC)
+  - `SEPOLIA_PRIVATE_KEY` (deployer account)
 
-This example project includes:
+## Install & Compile
+```bash
+# root (Hardhat)
+npm install
+npm run compile
 
-- A simple Hardhat configuration file.
-- Foundry-compatible Solidity unit tests.
-- TypeScript integration tests using [`node:test`](nodejs.org/api/test.html), the new Node.js native test runner, and [`viem`](https://viem.sh/).
-- Examples demonstrating how to connect to different types of networks, including locally simulating OP mainnet.
+# frontend
+cd nft-minter-dapp
+npm install
+```
 
-## Usage
+## Deploy Contract
+Local (simulated L1):
+```bash
+npx hardhat ignition deploy ignition/modules/MyNFTModule.ts --network hardhatMainnet
+```
+Sepolia testnet:
+```bash
+# ensure SEPOLIA_RPC_URL and SEPOLIA_PRIVATE_KEY are set
+npx hardhat ignition deploy --network sepolia ignition/modules/MyNFTModule.ts
+```
+Note the deployed address and keep it for the frontend.
 
-### Running Tests
+## Configure Frontend
+Create `nft-minter-dapp/.env.local`:
+```
+PINATA_JWT=your_pinata_jwt
+NEXT_PUBLIC_GATEWAY_URL=your_gateway_domain   # optional
+NEXT_PUBLIC_CONTRACT_ADDRESS=0xYourDeployedContract
+```
+Run the app:
+```bash
+cd nft-minter-dapp
+npm run dev
+# http://localhost:3000
+```
+Connect MetaMask, fill name/description, select a file, and click “Mint NFT”. The app uploads your file and metadata to IPFS (Pinata) and calls `mintNFT(account, 'ipfs://<metadataCID>')`.
 
-To run all the tests in the project, execute the following command:
-
-```shell
+## Tests
+```bash
 npx hardhat test
 ```
 
-You can also selectively run the Solidity or `node:test` tests:
-
-```shell
-npx hardhat test solidity
-npx hardhat test nodejs
-```
-
-### Make a deployment to Sepolia
-
-This project includes an example Ignition module to deploy the contract. You can deploy this module to a locally simulated chain or to Sepolia.
-
-To run the deployment to a local chain:
-
-```shell
-npx hardhat ignition deploy ignition/modules/Counter.ts
-```
-
-To run the deployment to Sepolia, you need an account with funds to send the transaction. The provided Hardhat configuration includes a Configuration Variable called `SEPOLIA_PRIVATE_KEY`, which you can use to set the private key of the account you want to use.
-
-You can set the `SEPOLIA_PRIVATE_KEY` variable using the `hardhat-keystore` plugin or by setting it as an environment variable.
-
-To set the `SEPOLIA_PRIVATE_KEY` config variable using `hardhat-keystore`:
-
-```shell
-npx hardhat keystore set SEPOLIA_PRIVATE_KEY
-```
-
-After setting the variable, you can run the deployment with the Sepolia network:
-
-```shell
-npx hardhat ignition deploy --network sepolia ignition/modules/Counter.ts
-```
+## Notes
+- Only the contract owner can mint. Ensure the deployer has mint permissions.
+- Artifacts for the frontend ABI are generated under `artifacts/contracts/MyNFT.sol/` after compile.
+- OP chain type example available in `scripts/send-op-tx.ts`.
